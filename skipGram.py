@@ -22,10 +22,10 @@ def text2sentences(path):
             sentence = l.lower().split()
             sentence_clean = []
             for word in sentence:
-                precedent_was_num = False  # idea is to avoid successions of <NUMBER> token
-                # (for example from "twenty one" --> "<NUMBER>", "<NUMBER>" --> "<NUMBER>")
+                precedent_was_num = False  ## idea is to avoid successions of <NUMBER> token 
+                                           ## (for example from "twenty one" --> "<NUMBER>", "<NUMBER>" --> "<NUMBER>")
 
-                # Split composite words like "35-year-old"
+                ## Split composite words like "35-year-old"
                 if ('-' in word) and (len(word) > 1):
                     split = word.split('-')
                     for item in split:
@@ -33,17 +33,17 @@ def text2sentences(path):
                             sentence_clean.append(item)
                             precedent_was_num = False
                         elif (item.isnumeric()) and (not precedent_was_num):
-                            sentence_clean.append('<NUMBER>')  # Using a unique token to replace all numbers
+                            sentence_clean.append('<NUMBER>')  ## Using a unique token to replace all numbers
                             precedent_was_num = True
 
                 elif (word.isalpha()) and (word not in STOP_WORDS):
                     sentence_clean.append(word)
                     precedent_was_num = False
                 elif word in ["'t", "'nt", "nt"]:
-                    sentence_clean.append('<NEGATIVE>')  # Using a unique token for negative form
+                    sentence_clean.append('<NEGATIVE>')  ## Using a unique token for negative form
                     precedent_was_num = False
                 elif ((word.isnumeric()) or (word in _num_words)) and (not precedent_was_num):
-                    sentence_clean.append('<NUMBER>')  # Using a unique token to replace all numbers
+                    sentence_clean.append('<NUMBER>')  ## Using a unique token to replace all numbers
                     precedent_was_num = True
             if (len(sentence_clean) > 0) and (np.unique(sentence_clean).tolist() != ['<NUMBER>']):
                 sentences.append(sentence_clean)
@@ -63,26 +63,24 @@ class SkipGram:
         words = [word for sentence in sentences for word in sentence]  # words in vocab with their multiplicity
         self.vocab = sorted(set(words))  # list of valid words
         vocab_size = len(self.vocab)
-        word_count = dict(
-            Counter(words))  # we used Counter from collections package to get the counts/frequency of words in the set
-        self.freq = np.array(
-            [word_count[word] / vocab_size for word in self.vocab])  # useful for the computation of the unigram table
+        word_count = dict(Counter(words))  #we used Counter from collections package to get the counts/frequency of words in the set
+        self.freq = np.array([word_count[word] / vocab_size for word in self.vocab])  #useful for the computation of the unigram table
         self.nEmbed = nEmbed
         self.negativeRate = negativeRate
         self.winSize = winSize
-        self.minCount = minCount  # minimum required number of words in a sentence
+        self.minCount = minCount  #minimum required number of words in a sentence
         self.accLoss = 0
         self.trainWords = 0
-        self.loss = []  # list of loss function evolution. Could be usefull to plot
+        self.loss = []  #list of loss function evolution. Could be usefull to plot
 
         self.centerVecs = (np.random.rand(vocab_size, nEmbed) - 0.5) / nEmbed
         self.contxtVecs = (np.random.rand(vocab_size, nEmbed) - 0.5) / nEmbed
 
-        # Updating w2id
+        ## Updating w2id
         for i, word in enumerate(self.vocab):
             self.w2id[word] = i
-
-        # Computing unigram table
+        
+        ## Computing unigram table
         self.unigram_table = self.compute_unigram_table()
 
     def compute_unigram_table(self, power=3 / 4, table_length=int(1e8)):
@@ -107,13 +105,13 @@ class SkipGram:
         negWordsId = []
         while counter < self.negativeRate:
             negWordId = np.random.choice(self.unigram_table)
-            if negWordId not in omit:  # omitting words in omit
+            if negWordId not in omit:  ##omitting words in omit
                 negWordsId.append(negWordId)
                 counter += 1
         return negWordsId
 
     def train(self, n_epoch=5, lr=0.05):
-        # lr is learning rate
+        ## lr is learning rate
         t0 = time()
         for epoch in range(n_epoch):
             print("\n epoch: %d of %d" % (epoch + 1, n_epoch))
@@ -124,8 +122,7 @@ class SkipGram:
                         self.loss.append(self.accLoss / self.trainWords)
                         hours, rem = divmod(t1 - t0, 3600)
                         minutes, seconds = divmod(rem, 60)
-                        timer = "{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes),
-                                                                seconds)  # print progression time in hh:mm:ss format
+                        timer = "{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds)  ## print progression time in hh:mm:ss format
                         print(' > training %d of %d ----- time = ' % (
                             counter, len(self.trainset)) + timer + ' ----- loss: %.3f' % self.loss[-1])
                         self.trainWords = 0
@@ -150,8 +147,7 @@ class SkipGram:
                     self.loss.append(self.accLoss / self.trainWords)
                     hours, rem = divmod(t1 - t0, 3600)
                     minutes, seconds = divmod(rem, 60)
-                    timer = "{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes),
-                                                            seconds)  # print progression time in hh:mm:ss format
+                    timer = "{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds)  ## print progression time in hh:mm:ss format
                     print(' > training %d of %d ----- time = ' % (
                         counter, len(self.trainset)) + timer + ' ----- loss: %.3f' % self.loss[-1])
                     self.trainWords = 0
@@ -163,24 +159,23 @@ class SkipGram:
         negvecs = self.contxtVecs[negativeIds]
         z = expit(-np.dot(ctxtvec, vec))
         zNeg = - expit(np.dot(negvecs, vec))
-
-        # Computing gradients
-        contextGrad = z * vec  # to be multiplied by -1 because of the definition of z
-        centerGrad = z * self.contxtVecs[contextId] + np.dot(zNeg,
-                                                             negvecs)  # to be multiplied by -1 because of the definition of z and zNeg
-        negativesGrad = np.outer(zNeg, vec)  # to be multiplied by -1 because of the definition of zNeg
-
-        # Gradient descent step
+        
+        ## Computing gradients
+        contextGrad = z * vec  #to be multiplied by -1 because of the definition of z
+        centerGrad = z * self.contxtVecs[contextId] + np.dot(zNeg, negvecs)  #to be multiplied by -1 because of the definition of z and zNeg
+        negativesGrad = np.outer(zNeg, vec)  #to be multiplied by -1 because of the definition of zNeg
+        
+        ## Gradient descent step
         np.add(vec, centerGrad * lr, out=vec);
         np.add(ctxtvec, contextGrad * lr, out=ctxtvec);
         np.add(negvecs, negativesGrad * lr, out=negvecs);
-
-        # Computing loss
+        
+        ## Computing loss
         z = expit(np.dot(ctxtvec, vec))
         zNeg = expit(-np.dot(negvecs, vec))
         self.accLoss -= np.log(z) + np.sum(np.log(zNeg))
-
-        # Update of embeddings
+        
+        ## Update of embeddings
         self.centerVecs[wordId] = vec
         self.contxtVecs[contextId] = ctxtvec
         self.contxtVecs[negativeIds] = negvecs
@@ -190,8 +185,8 @@ class SkipGram:
         import os
         from zipfile import ZipFile, ZIP_DEFLATED
         from json import dumps
-
-        # If path is not a zip file we are going to change it
+        
+        ## If path is not a zip file we are going to change it
         if "." in path:
             filename_split = path.split('.')
             if filename_split[-1] != "zip":
@@ -201,7 +196,7 @@ class SkipGram:
             path += "/skipgram.zip"
 
         zf = ZipFile(path, mode="w", compression=ZIP_DEFLATED)
-        # Parameters of the model
+        ## Parameters of the model
         model_info = dumps(
             {
                 "nEmbed": self.nEmbed,
@@ -216,8 +211,8 @@ class SkipGram:
         zf.writestr("model_info.json", model_info)
         zf.writestr("trainset.json", trainset)
         zf.writestr("vocab.json", vocab)
-
-        # Saving embeddings
+        
+        ## Saving embeddings
         np.save("centerVecs.npy", self.centerVecs)
         zf.write("centerVecs.npy")
         os.remove("centerVecs.npy")
@@ -244,11 +239,11 @@ class SkipGram:
         if (word1 in self.vocab) and (word2 in self.vocab):
             vec1 = self.centerVecs[self.w2id[word1]]
             vec2 = self.centerVecs[self.w2id[word2]]
-            # cosine similarity
+            ## cosine similarity
             cos_similarity = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
             score = np.clip(cos_similarity, 0, 1)
         else:
-            score = np.random.rand()  # random score if the word is not in vocabulary (uniform in [0,1])
+            score = np.random.rand()  ## random score if the word is not in vocabulary (uniform in [0,1])
         if score <= 1e-4:
             score = 0
         return score
@@ -278,8 +273,8 @@ class SkipGram:
         skipgram.contxtVecs = np.load(BytesIO(zf.read('contxtVecs.npy')))
         skipgram.loss = np.load(BytesIO(zf.read('loss.npy'))).tolist()
         skipgram.freq = np.load(BytesIO(zf.read('freq.npy')))
-        # No need to cumpute the unigram table, it is computed at the initialization.
-        # This is important because the table takes up to 700MB when saved. (lenght is 1e8)
+        ## No need to cumpute the unigram table, it is computed at the initialization.
+        ## This is important because the table takes up to 700MB when saved. (lenght is 1e8)
 
         zf.close()
         return skipgram
